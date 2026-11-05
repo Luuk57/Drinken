@@ -38,10 +38,18 @@
     button.submit-btn { width: 100%; margin-top: 20px; padding: 14px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
     button.submit-btn:disabled { background: #888; }
     
-    /* Limiet Box */
-    .limiet-box { background: #eef6ff; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #b6d4fe; }
+    /* Limiet & Progress Bar Box */
+    .limiet-box { background: #eef6ff; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #b6d4fe; }
     .limiet-box label { margin-top: 0; }
     
+    .progress-container { width: 100%; background-color: #e9ecef; border-radius: 10px; height: 24px; margin-top: 10px; overflow: hidden; position: relative; box-shadow: inset 0 1px 3px rgba(0,0,0,0.2); }
+    .progress-bar { height: 100%; width: 0%; transition: width 0.4s ease, background-color 0.4s ease; border-radius: 10px; }
+    .progress-text { position: absolute; width: 100%; text-align: center; top: 3px; font-size: 13px; font-weight: bold; color: #111; }
+    
+    .bg-groen { background-color: #28a745; }
+    .bg-oranje { background-color: #ffc107; }
+    .bg-rood { background-color: #dc3545; }
+
     /* Tabel */
     .table-responsive { overflow-x: auto; margin-top: 10px; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 500px; }
@@ -88,10 +96,10 @@
       <label>Hoeveelheid (ml)</label>
       <input type="number" id="ml" placeholder="200" required>
       <div class="quick-ml">
+        <button type="button" onclick="setMl(100)">100 ml</button>
         <button type="button" onclick="setMl(75)">75 ml</button>
         <button type="button" onclick="setMl(150)">150 ml</button>
-        <button type="button" onclick="setMl(250)">250 ml</button>
-        <button type="button" onclick="setMl(500)">500 ml</button>
+        <button type="button" onclick="setMl(200)">200 ml</button>
       </div>
       
       <label>Optionele Notitie</label>
@@ -103,11 +111,16 @@
 
   <!-- Tab 2: Historie & Dagoverzicht -->
   <div id="tab-historie" class="tab-content">
-    <h2>Vocht Overzicht</h2>
+    <h2>Vocht Overzicht Vandaag</h2>
     
     <div class="limiet-box">
       <label>Dagelijkse Vochtlimiet (ml):</label>
-      <input type="number" id="vochtLimiet" value="1500" onchange="laadHistorie()">
+      <input type="number" id="vochtLimiet" value="1000" onchange="laadHistorie()">
+      
+      <div class="progress-container">
+        <div id="progressBar" class="progress-bar bg-groen"></div>
+        <div id="progressText" class="progress-text">0 / 1000 ml (0%)</div>
+      </div>
     </div>
 
     <button onclick="laadHistorie()" style="margin-bottom: 12px; padding: 8px 12px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer;">🔄 Verversen</button>
@@ -133,7 +146,6 @@
   <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyv8oB4VKdzq3PAs7ZSSfXtAw2lcoXyMPDpK_fzg48Evi-nQTsjpFnwrYfEGUZj02NvFg/exec';
 
-    // Registreer Service Worker voor PWA
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
@@ -190,10 +202,10 @@
       });
     });
 
-    // Historie ophalen
+    // Historie ophalen & Progress bar bijwerken
     function laadHistorie() {
       const tbody = document.getElementById('historieTabel');
-      const limiet = Number(document.getElementById('vochtLimiet').value) || 1500;
+      const limiet = Number(document.getElementById('vochtLimiet').value) || 1000;
       tbody.innerHTML = '<tr><td colspan="5">Laden...</td></tr>';
 
       fetch(SCRIPT_URL)
@@ -202,15 +214,28 @@
         tbody.innerHTML = '';
         if (!data || data.length === 0) {
           tbody.innerHTML = '<tr><td colspan="5">Nog geen vocht gelogd.</td></tr>';
+          updateProgressBar(0, limiet);
           return;
         }
 
-        // Bereken dagtotaal
+        // Vandaag datum in formaat dd-mm-yyyy bepalen
+        const vandaagStr = new Date().toLocaleDateString('nl-NL');
+
         let dagTotalen = {};
+        let totaalVandaag = 0;
+
         data.forEach(row => {
           let d = row.datum;
+          if (d.includes('T')) d = new Date(d).toLocaleDateString('nl-NL');
           dagTotalen[d] = (dagTotalen[d] || 0) + Number(row.ml);
+          
+          if (d === vandaagStr) {
+            totaalVandaag += Number(row.ml);
+          }
         });
+
+        // Update de Progress Bar bovenaan
+        updateProgressBar(totaalVandaag, limiet);
 
         data.reverse().forEach(row => {
           let schoneDatum = row.datum || '';
@@ -219,7 +244,7 @@
           if (schoneDatum.includes('T')) schoneDatum = new Date(schoneDatum).toLocaleDateString('nl-NL');
           if (schoneTijd.includes('T')) schoneTijd = new Date(schoneTijd).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
 
-          const totaalOpDag = dagTotalen[row.datum] || 0;
+          const totaalOpDag = dagTotalen[schoneDatum] || 0;
           let badgeKlasse = 'badge-groen';
           if (totaalOpDag >= limiet) badgeKlasse = 'badge-rood';
           else if (totaalOpDag >= limiet * 0.85) badgeKlasse = 'badge-oranje';
@@ -239,8 +264,27 @@
         });
       })
       .catch(err => {
-        tbody.innerHTML = '<tr><td colspan="5">Fout bij laden overzicht. Controleer de rechten van het Google Script.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5">Fout bij laden overzicht.</td></tr>';
       });
+    }
+
+    // Functie voor het visueel bijwerken van de Progress Bar
+    function updateProgressBar(totaal, limiet) {
+      const percentage = Math.min(Math.round((totaal / limiet) * 100), 100);
+      const progressBar = document.getElementById('progressBar');
+      const progressText = document.getElementById('progressText');
+
+      progressBar.style.width = percentage + '%';
+      progressText.innerText = `${totaal} / ${limiet} ml (${Math.round((totaal / limiet) * 100)}%)`;
+
+      progressBar.className = 'progress-bar';
+      if (totaal >= limiet) {
+        progressBar.classList.add('bg-rood');
+      } else if (totaal >= limiet * 0.85) {
+        progressBar.classList.add('bg-oranje');
+      } else {
+        progressBar.classList.add('bg-groen');
+      }
     }
 
     function bewerkRegel(rowIndex, oudeSoort, oudMl, oudeNotitie) {
@@ -253,13 +297,7 @@
       const nieuwNotitie = prompt("Notitie:", oudeNotitie);
       if (nieuwNotitie === null) return;
 
-      const payload = {
-        actie: 'EDIT',
-        rowIndex: rowIndex,
-        soortDrinken: nieuwSoort,
-        ml: nieuwMl,
-        notitie: nieuwNotitie
-      };
+      const payload = { actie: 'EDIT', rowIndex: rowIndex, soortDrinken: nieuwSoort, ml: nieuwMl, notitie: nieuwNotitie };
 
       fetch(SCRIPT_URL, {
         method: 'POST',
@@ -289,4 +327,3 @@
   </script>
 </body>
 </html>
-
