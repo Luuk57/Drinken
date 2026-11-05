@@ -1,1 +1,292 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Drinken & Vocht Logboek</title>
+  
+  <!-- PWA Links -->
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#007bff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="VochtLog">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3105/3105807.png">
+
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { margin: 0; padding: 15px; background-color: #f4f6f8; color: #333; }
+    
+    /* Navigatie Tabs */
+    .tabs { display: flex; gap: 5px; margin-bottom: 20px; background: #e0e0e0; padding: 4px; border-radius: 10px; }
+    .tab-btn { flex: 1; padding: 12px 5px; border: none; background: transparent; font-weight: bold; border-radius: 8px; font-size: 15px; cursor: pointer; }
+    .tab-btn.active { background: #ffffff; color: #007bff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    
+    /* Inhoud per tab */
+    .tab-content { display: none; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .tab-content.active { display: block; }
+    
+    /* Formulieren */
+    h2 { margin-top: 0; color: #111; font-size: 20px; }
+    label { display: block; margin-top: 12px; font-weight: 600; font-size: 14px; }
+    input, select { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; background-color: white; }
+    
+    /* Snelle Knoppen voor ML */
+    .quick-ml { display: flex; gap: 6px; margin-top: 8px; }
+    .quick-ml button { flex: 1; padding: 8px; background: #e9ecef; border: 1px solid #ced4da; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    
+    button.submit-btn { width: 100%; margin-top: 20px; padding: 14px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+    button.submit-btn:disabled { background: #888; }
+    
+    /* Limiet Box */
+    .limiet-box { background: #eef6ff; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #b6d4fe; }
+    .limiet-box label { margin-top: 0; }
+    
+    /* Tabel */
+    .table-responsive { overflow-x: auto; margin-top: 10px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 500px; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #ddd; vertical-align: middle; }
+    th { background-color: #f8f9fa; font-size: 13px; color: #555; }
+    
+    /* Status Badges */
+    .badge { display: inline-block; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 12px; }
+    .badge-groen { background-color: #d4edda; color: #155724; }
+    .badge-oranje { background-color: #fff3cd; color: #856404; }
+    .badge-rood { background-color: #f8d7da; color: #721c24; }
+
+    .btn-actie { padding: 6px 10px; border: none; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; margin-right: 4px; }
+    .btn-edit { background-color: #ffc107; color: #212529; }
+    .btn-delete { background-color: #dc3545; color: white; }
+  </style>
+</head>
+<body>
+
+  <!-- Tab Knoppen -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="openTab('invoer')">💧 Drinken Invoeren</button>
+    <button class="tab-btn" onclick="openTab('historie')">📋 Vocht Overzicht</button>
+  </div>
+
+  <!-- Tab 1: Drinken Invoeren -->
+  <div id="tab-invoer" class="tab-content active">
+    <h2>Vocht Loggen</h2>
+    <form id="formDrinken">
+      
+      <label>Soort Drinken</label>
+      <select id="soortDrinken" required>
+        <option value="" disabled selected>Kies drank type...</option>
+        <option value="Water">Water</option>
+        <option value="Koffie">Koffie</option>
+        <option value="Thee">Thee</option>
+        <option value="Frisdrank / Sap">Frisdrank / Sap</option>
+        <option value="Melk / Zuiveldrank">Melk / Zuiveldrank</option>
+        <option value="Soep / Bouillon">Soep / Bouillon</option>
+        <option value="Medisch / Dialyse Vocht">Medisch / Dialyse Vocht</option>
+        <option value="Overig">Overig</option>
+      </select>
+
+      <label>Hoeveelheid (ml)</label>
+      <input type="number" id="ml" placeholder="200" required>
+      <div class="quick-ml">
+        <button type="button" onclick="setMl(150)">150 ml</button>
+        <button type="button" onclick="setMl(200)">200 ml</button>
+        <button type="button" onclick="setMl(250)">250 ml</button>
+        <button type="button" onclick="setMl(500)">500 ml</button>
+      </div>
+      
+      <label>Optionele Notitie</label>
+      <input type="text" id="notitie" placeholder="bijv. Bij het eten">
+      
+      <button type="submit" class="submit-btn">Opslaan</button>
+    </form>
+  </div>
+
+  <!-- Tab 2: Historie & Dagoverzicht -->
+  <div id="tab-historie" class="tab-content">
+    <h2>Vocht Overzicht</h2>
+    
+    <div class="limiet-box">
+      <label>Dagelijkse Vochtlimiet (ml):</label>
+      <input type="number" id="vochtLimiet" value="1500" onchange="laadHistorie()">
+    </div>
+
+    <button onclick="laadHistorie()" style="margin-bottom: 12px; padding: 8px 12px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer;">🔄 Verversen</button>
+    
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Datum & Tijd</th>
+            <th>Drank</th>
+            <th>Hoeveelheid</th>
+            <th>Notitie</th>
+            <th>Acties</th>
+          </tr>
+        </thead>
+        <tbody id="historieTabel">
+          <tr><td colspan="5">Gegevens laden...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyv8oB4VKdzq3PAs7ZSSfXtAw2lcoXyMPDpK_fzg48Evi-nQTsjpFnwrYfEGUZj02NvFg/exec';
+
+    // Registreer Service Worker voor PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('Service Worker geregistreerd!'))
+          .catch(err => console.log('Service Worker mislukt:', err));
+      });
+    }
+
+    function openTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      
+      document.getElementById('tab-' + tabName).classList.add('active');
+      event.currentTarget.classList.add('active');
+
+      if (tabName === 'historie') {
+        laadHistorie();
+      }
+    }
+
+    function setMl(waarde) {
+      document.getElementById('ml').value = waarde;
+    }
+
+    // Drinken verzenden
+    document.getElementById('formDrinken').addEventListener('submit', e => {
+      e.preventDefault();
+      
+      const payload = {
+        actie: 'CREATE',
+        soortDrinken: document.getElementById('soortDrinken').value,
+        ml: document.getElementById('ml').value,
+        notitie: document.getElementById('notitie').value
+      };
+
+      const btn = document.querySelector('#formDrinken .submit-btn');
+      btn.disabled = true;
+      btn.innerText = 'Opslaan...';
+
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(() => {
+        alert('Vocht succesvol opgeslagen!');
+        document.getElementById('formDrinken').reset();
+      })
+      .catch(err => alert('Fout bij opslaan'))
+      .finally(() => {
+        btn.disabled = false;
+        btn.innerText = 'Opslaan';
+      });
+    });
+
+    // Historie ophalen
+    function laadHistorie() {
+      const tbody = document.getElementById('historieTabel');
+      const limiet = Number(document.getElementById('vochtLimiet').value) || 1500;
+      tbody.innerHTML = '<tr><td colspan="5">Laden...</td></tr>';
+
+      fetch(SCRIPT_URL)
+      .then(res => res.json())
+      .then(data => {
+        tbody.innerHTML = '';
+        if (!data || data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5">Nog geen vocht gelogd.</td></tr>';
+          return;
+        }
+
+        // Bereken dagtotaal
+        let dagTotalen = {};
+        data.forEach(row => {
+          let d = row.datum;
+          dagTotalen[d] = (dagTotalen[d] || 0) + Number(row.ml);
+        });
+
+        data.reverse().forEach(row => {
+          let schoneDatum = row.datum || '';
+          let schoneTijd = row.tijd || '';
+
+          if (schoneDatum.includes('T')) schoneDatum = new Date(schoneDatum).toLocaleDateString('nl-NL');
+          if (schoneTijd.includes('T')) schoneTijd = new Date(schoneTijd).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+
+          const totaalOpDag = dagTotalen[row.datum] || 0;
+          let badgeKlasse = 'badge-groen';
+          if (totaalOpDag >= limiet) badgeKlasse = 'badge-rood';
+          else if (totaalOpDag >= limiet * 0.85) badgeKlasse = 'badge-oranje';
+
+          tbody.innerHTML += `
+            <tr>
+              <td><small style="color: #666;">${schoneDatum}</small><br><b>${schoneTijd}</b></td>
+              <td><b>${row.soortDrinken}</b></td>
+              <td><b>${row.ml} ml</b><br><span class="badge ${badgeKlasse}">${totaalOpDag}/${limiet} ml</span></td>
+              <td>${row.notitie || '-'}</td>
+              <td style="white-space: nowrap;">
+                <button class="btn-actie btn-edit" onclick="bewerkRegel(${row.rowIndex}, '${row.soortDrinken}', '${row.ml}', '${row.notitie}')">✏️</button>
+                <button class="btn-actie btn-delete" onclick="verwijderRegel(${row.rowIndex})">🗑️</button>
+              </td>
+            </tr>
+          `;
+        });
+      })
+      .catch(err => {
+        tbody.innerHTML = '<tr><td colspan="5">Fout bij laden overzicht. Controleer de rechten van het Google Script.</td></tr>';
+      });
+    }
+
+    function bewerkRegel(rowIndex, oudeSoort, oudMl, oudeNotitie) {
+      const nieuwSoort = prompt("Soort Drinken:", oudeSoort);
+      if (nieuwSoort === null) return;
+
+      const nieuwMl = prompt("Hoeveelheid (ml):", oudMl);
+      if (nieuwMl === null) return;
+
+      const nieuwNotitie = prompt("Notitie:", oudeNotitie);
+      if (nieuwNotitie === null) return;
+
+      const payload = {
+        actie: 'EDIT',
+        rowIndex: rowIndex,
+        soortDrinken: nieuwSoort,
+        ml: nieuwMl,
+        notitie: nieuwNotitie
+      };
+
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(() => {
+        alert('Regel bijgewerkt!');
+        laadHistorie();
+      });
+    }
+
+    function verwijderRegel(rowIndex) {
+      if (confirm("Weet je zeker dat je deze invoer wilt verwijderen?")) {
+        const payload = { actie: 'DELETE', rowIndex: rowIndex };
+        fetch(SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).then(() => {
+          alert('Regel verwijderd!');
+          laadHistorie();
+        });
+      }
+    }
+  </script>
+</body>
+</html>
 
