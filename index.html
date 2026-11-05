@@ -18,7 +18,7 @@
     body { margin: 0; padding: 15px; background-color: #f4f6f8; color: #333; }
     
     /* Navigatie Tabs */
-    .tabs { display: flex; gap: 5px; margin-bottom: 20px; background: #e0e0e0; padding: 4px; border-radius: 10px; }
+    .tabs { display: flex; gap: 5px; margin-bottom: 15px; background: #e0e0e0; padding: 4px; border-radius: 10px; }
     .tab-btn { flex: 1; padding: 12px 5px; border: none; background: transparent; font-weight: bold; border-radius: 8px; font-size: 15px; cursor: pointer; }
     .tab-btn.active { background: #ffffff; color: #007bff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     
@@ -33,18 +33,18 @@
     
     /* Snelle Knoppen voor ML */
     .quick-ml { display: flex; gap: 6px; margin-top: 8px; }
-    .quick-ml button { flex: 1; padding: 8px; background: #e9ecef; border: 1px solid #ced4da; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    .quick-ml button { flex: 1; padding: 10px 4px; background: #e9ecef; border: 1px solid #ced4da; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
     
     button.submit-btn { width: 100%; margin-top: 20px; padding: 14px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
     button.submit-btn:disabled { background: #888; }
     
-    /* Limiet & Progress Bar Box */
-    .limiet-box { background: #eef6ff; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #b6d4fe; }
+    /* Limiet & Progress Bar Box op Invoerscherm */
+    .limiet-box { background: #eef6ff; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #b6d4fe; }
     .limiet-box label { margin-top: 0; }
     
-    .progress-container { width: 100%; background-color: #e9ecef; border-radius: 10px; height: 24px; margin-top: 10px; overflow: hidden; position: relative; box-shadow: inset 0 1px 3px rgba(0,0,0,0.2); }
+    .progress-container { width: 100%; background-color: #e9ecef; border-radius: 10px; height: 26px; margin-top: 10px; overflow: hidden; position: relative; box-shadow: inset 0 1px 3px rgba(0,0,0,0.15); }
     .progress-bar { height: 100%; width: 0%; transition: width 0.4s ease, background-color 0.4s ease; border-radius: 10px; }
-    .progress-text { position: absolute; width: 100%; text-align: center; top: 3px; font-size: 13px; font-weight: bold; color: #111; }
+    .progress-text { position: absolute; width: 100%; text-align: center; top: 4px; font-size: 13px; font-weight: bold; color: #111; }
     
     .bg-groen { background-color: #28a745; }
     .bg-oranje { background-color: #ffc107; }
@@ -77,6 +77,20 @@
 
   <!-- Tab 1: Drinken Invoeren -->
   <div id="tab-invoer" class="tab-content active">
+    
+    <!-- Progress Bar Direct bij Invoer -->
+    <div class="limiet-box">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <label style="margin: 0;">Vocht Vandaag (Limiet: <span id="limietLabel">1000</span> ml)</label>
+        <button onclick="laadGegevens()" style="padding: 4px 8px; font-size: 12px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">🔄</button>
+      </div>
+      
+      <div class="progress-container">
+        <div id="progressBar" class="progress-bar bg-groen"></div>
+        <div id="progressText" class="progress-text">Laden...</div>
+      </div>
+    </div>
+
     <h2>Vocht Loggen</h2>
     <form id="formDrinken">
       
@@ -97,9 +111,9 @@
       <input type="number" id="ml" placeholder="200" required>
       <div class="quick-ml">
         <button type="button" onclick="setMl(100)">100 ml</button>
-        <button type="button" onclick="setMl(75)">75 ml</button>
         <button type="button" onclick="setMl(150)">150 ml</button>
         <button type="button" onclick="setMl(200)">200 ml</button>
+        <button type="button" onclick="setMl(250)">250 ml</button>
       </div>
       
       <label>Optionele Notitie</label>
@@ -109,21 +123,16 @@
     </form>
   </div>
 
-  <!-- Tab 2: Historie & Dagoverzicht -->
+  <!-- Tab 2: Historie -->
   <div id="tab-historie" class="tab-content">
-    <h2>Vocht Overzicht Vandaag</h2>
+    <h2>Vocht Overzicht Historie</h2>
     
-    <div class="limiet-box">
+    <div style="margin-bottom: 15px;">
       <label>Dagelijkse Vochtlimiet (ml):</label>
-      <input type="number" id="vochtLimiet" value="1000" onchange="laadHistorie()">
-      
-      <div class="progress-container">
-        <div id="progressBar" class="progress-bar bg-groen"></div>
-        <div id="progressText" class="progress-text">0 / 1000 ml (0%)</div>
-      </div>
+      <input type="number" id="vochtLimiet" value="1000" onchange="updateLimietEnBalk()">
     </div>
 
-    <button onclick="laadHistorie()" style="margin-bottom: 12px; padding: 8px 12px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer;">🔄 Verversen</button>
+    <button onclick="laadGegevens()" style="margin-bottom: 12px; padding: 8px 12px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer;">🔄 Verversen</button>
     
     <div class="table-responsive">
       <table>
@@ -145,14 +154,18 @@
 
   <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyv8oB4VKdzq3PAs7ZSSfXtAw2lcoXyMPDpK_fzg48Evi-nQTsjpFnwrYfEGUZj02NvFg/exec';
+    let alleData = [];
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(reg => console.log('Service Worker geregistreerd!'))
-          .catch(err => console.log('Service Worker mislukt:', err));
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
       });
     }
+
+    // Bij het laden direct gegevens ophalen voor de progress bar
+    window.addEventListener('DOMContentLoaded', () => {
+      laadGegevens();
+    });
 
     function openTab(tabName) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -160,14 +173,16 @@
       
       document.getElementById('tab-' + tabName).classList.add('active');
       event.currentTarget.classList.add('active');
-
-      if (tabName === 'historie') {
-        laadHistorie();
-      }
     }
 
     function setMl(waarde) {
       document.getElementById('ml').value = waarde;
+    }
+
+    function updateLimietEnBalk() {
+      const limiet = Number(document.getElementById('vochtLimiet').value) || 1000;
+      document.getElementById('limietLabel').innerText = limiet;
+      verwerkEnToonData(alleData);
     }
 
     // Drinken verzenden
@@ -194,6 +209,7 @@
       .then(() => {
         alert('Vocht succesvol opgeslagen!');
         document.getElementById('formDrinken').reset();
+        laadGegevens(); // Direct progressbar en tabel vernieuwen!
       })
       .catch(err => alert('Fout bij opslaan'))
       .finally(() => {
@@ -202,73 +218,92 @@
       });
     });
 
-    // Historie ophalen & Progress bar bijwerken
-    function laadHistorie() {
-      const tbody = document.getElementById('historieTabel');
-      const limiet = Number(document.getElementById('vochtLimiet').value) || 1000;
-      tbody.innerHTML = '<tr><td colspan="5">Laden...</td></tr>';
-
+    // Gegevens Ophalen
+    function laadGegevens() {
       fetch(SCRIPT_URL)
       .then(res => res.json())
       .then(data => {
-        tbody.innerHTML = '';
-        if (!data || data.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5">Nog geen vocht gelogd.</td></tr>';
-          updateProgressBar(0, limiet);
-          return;
-        }
-
-        // Vandaag datum in formaat dd-mm-yyyy bepalen
-        const vandaagStr = new Date().toLocaleDateString('nl-NL');
-
-        let dagTotalen = {};
-        let totaalVandaag = 0;
-
-        data.forEach(row => {
-          let d = row.datum;
-          if (d.includes('T')) d = new Date(d).toLocaleDateString('nl-NL');
-          dagTotalen[d] = (dagTotalen[d] || 0) + Number(row.ml);
-          
-          if (d === vandaagStr) {
-            totaalVandaag += Number(row.ml);
-          }
-        });
-
-        // Update de Progress Bar bovenaan
-        updateProgressBar(totaalVandaag, limiet);
-
-        data.reverse().forEach(row => {
-          let schoneDatum = row.datum || '';
-          let schoneTijd = row.tijd || '';
-
-          if (schoneDatum.includes('T')) schoneDatum = new Date(schoneDatum).toLocaleDateString('nl-NL');
-          if (schoneTijd.includes('T')) schoneTijd = new Date(schoneTijd).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
-
-          const totaalOpDag = dagTotalen[schoneDatum] || 0;
-          let badgeKlasse = 'badge-groen';
-          if (totaalOpDag >= limiet) badgeKlasse = 'badge-rood';
-          else if (totaalOpDag >= limiet * 0.85) badgeKlasse = 'badge-oranje';
-
-          tbody.innerHTML += `
-            <tr>
-              <td><small style="color: #666;">${schoneDatum}</small><br><b>${schoneTijd}</b></td>
-              <td><b>${row.soortDrinken}</b></td>
-              <td><b>${row.ml} ml</b><br><span class="badge ${badgeKlasse}">${totaalOpDag}/${limiet} ml</span></td>
-              <td>${row.notitie || '-'}</td>
-              <td style="white-space: nowrap;">
-                <button class="btn-actie btn-edit" onclick="bewerkRegel(${row.rowIndex}, '${row.soortDrinken}', '${row.ml}', '${row.notitie}')">✏️</button>
-                <button class="btn-actie btn-delete" onclick="verwijderRegel(${row.rowIndex})">🗑️</button>
-              </td>
-            </tr>
-          `;
-        });
+        alleData = data || [];
+        verwerkEnToonData(alleData);
       })
       .catch(err => {
-        tbody.innerHTML = '<tr><td colspan="5">Fout bij laden overzicht.</td></tr>';
+        document.getElementById('progressText').innerText = "Fout bij laden";
       });
     }
 
-    // Functie voor het visueel bijwerken van de Progress Bar
+    // Gegevens verwerken (Progress bar + Historietabel)
+    function verwerkEnToonData(data) {
+      const limiet = Number(document.getElementById('vochtLimiet').value) || 1000;
+      const tbody = document.getElementById('historieTabel');
+      tbody.innerHTML = '';
+
+      if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5">Nog geen vocht gelogd.</td></tr>';
+        updateProgressBar(0, limiet);
+        return;
+      }
+
+      // Huidige datum bepalen (formaat: d-m-yyyy of dd-mm-yyyy)
+      const nu = new Date();
+      const dag = String(nu.getDate()).padStart(2, '0');
+      const maand = String(nu.getMonth() + 1).padStart(2, '0');
+      const jaar = nu.getFullYear();
+      const vandaagFormatted = `${dag}-${maand}-${jaar}`;
+
+      let dagTotalen = {};
+      let totaalVandaag = 0;
+
+      data.forEach(row => {
+        let d = row.datum || '';
+        if (d.includes('T')) d = new Date(d).toLocaleDateString('nl-NL');
+        
+        // Zorg dat datumnotaties exact overeenkomen
+        d = d.replace(/'/g, '').trim();
+
+        const ml = Number(row.ml) || 0;
+        dagTotalen[d] = (dagTotalen[d] || 0) + ml;
+        
+        // Controleer of de meting van vandaag is
+        if (d === vandaagFormatted || d === nu.toLocaleDateString('nl-NL')) {
+          totaalVandaag += ml;
+        }
+      });
+
+      // Update de Progress Bar op het invoerscherm
+      updateProgressBar(totaalVandaag, limiet);
+
+      // Historie Tabel Vullen
+      [...data].reverse().forEach(row => {
+        let schoneDatum = row.datum || '';
+        let schoneTijd = row.tijd || '';
+
+        if (schoneDatum.includes('T')) schoneDatum = new Date(schoneDatum).toLocaleDateString('nl-NL');
+        if (schoneTijd.includes('T')) schoneTijd = new Date(schoneTijd).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+
+        schoneDatum = schoneDatum.replace(/'/g, '').trim();
+        schoneTijd = schoneTijd.replace(/'/g, '').trim();
+
+        const totaalOpDag = dagTotalen[schoneDatum] || 0;
+        let badgeKlasse = 'badge-groen';
+        if (totaalOpDag >= limiet) badgeKlasse = 'badge-rood';
+        else if (totaalOpDag >= limiet * 0.85) badgeKlasse = 'badge-oranje';
+
+        tbody.innerHTML += `
+          <tr>
+            <td><small style="color: #666;">${schoneDatum}</small><br><b>${schoneTijd}</b></td>
+            <td><b>${row.soortDrinken}</b></td>
+            <td><b>${row.ml} ml</b><br><span class="badge ${badgeKlasse}">${totaalOpDag}/${limiet} ml</span></td>
+            <td>${row.notitie || '-'}</td>
+            <td style="white-space: nowrap;">
+              <button class="btn-actie btn-edit" onclick="bewerkRegel(${row.rowIndex}, '${row.soortDrinken}', '${row.ml}', '${row.notitie}')">✏️</button>
+              <button class="btn-actie btn-delete" onclick="verwijderRegel(${row.rowIndex})">🗑️</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    // Update Progress Bar Functie
     function updateProgressBar(totaal, limiet) {
       const percentage = Math.min(Math.round((totaal / limiet) * 100), 100);
       const progressBar = document.getElementById('progressBar');
@@ -306,7 +341,7 @@
         body: JSON.stringify(payload)
       }).then(() => {
         alert('Regel bijgewerkt!');
-        laadHistorie();
+        laadGegevens();
       });
     }
 
@@ -320,7 +355,7 @@
           body: JSON.stringify(payload)
         }).then(() => {
           alert('Regel verwijderd!');
-          laadHistorie();
+          laadGegevens();
         });
       }
     }
