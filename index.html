@@ -323,6 +323,14 @@
     loadSettingsAndData();
   };
 
+  function getLocalDateKey() {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   function renderPhotoPicker() {
     const grid = document.getElementById('iconPickerGrid');
     grid.innerHTML = '';
@@ -371,16 +379,25 @@
   }
 
   function loadTodayIntake() {
-    const todayKey = new Date().toISOString().slice(0, 10);
-    db.collection('vocht_intake').where('dateKey', '==', todayKey).orderBy('timestamp', 'desc').get().then(snapshot => {
+    const todayKey = getLocalDateKey();
+    db.collection('vocht_intake').where('dateKey', '==', todayKey).get().then(snapshot => {
       todayIntake = [];
       snapshot.forEach(doc => {
         todayIntake.push({ id: doc.id, ...doc.data() });
       });
+
+      // Sorteer lokaal op tijd (nieuwste bovenaan)
+      todayIntake.sort((a, b) => {
+        if (b.time && a.time) {
+          return b.time.localeCompare(a.time);
+        }
+        return 0;
+      });
+
       renderIntakeLog();
       updateProgressBar();
     }).catch(err => {
-      console.log("Geen inname records:", err);
+      console.log("Fout bij ophalen innames:", err);
     });
   }
 
@@ -439,19 +456,23 @@
 
     const now = new Date();
     const timeStr = now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
-    const dateKey = now.toISOString().slice(0, 10);
+    const dateKey = getLocalDateKey();
 
     const intakeRecord = {
       drinkName: selectedDrinkForModal.name,
       drinkImage: selectedDrinkForModal.image,
-      amount: amount,
+      amount: parseInt(amount),
       time: timeStr,
       dateKey: dateKey,
       timestamp: firebase.firestore.FieldValue.serverTimestamp()
     };
 
-    db.collection('vocht_intake').add(intakeRecord).then(() => {
+    db.collection('vocht_intake').add(intakeRecord).then(docRef => {
       closeModal();
+      intakeRecord.id = docRef.id;
+      todayIntake.unshift(intakeRecord);
+      renderIntakeLog();
+      updateProgressBar();
       loadTodayIntake();
     }).catch(err => {
       alert("Fout bij opslaan inname: " + err.message);
