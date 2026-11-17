@@ -3,362 +3,652 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Drinken & Vocht Logboek</title>
+  <title>POS Vocht Intake & Beheer (1000ml Limiet)</title>
   
-  <!-- PWA Links -->
-  <link rel="manifest" href="./manifest.json">
-  <meta name="theme-color" content="#007bff">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="VochtLog">
-  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3105/3105807.png">
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  
+  <!-- SheetJS voor Excel Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <style>
-    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { margin: 0; padding: 15px; background-color: #f4f6f8; color: #333; }
+    :root {
+      --primary: #0056b3;
+      --primary-dark: #004090;
+      --success: #28a745;
+      --warning: #ffc107;
+      --danger: #dc3545;
+      --bg-color: #f4f6f9;
+      --card-bg: #ffffff;
+      --text-color: #333333;
+      --border-color: #d1d5db;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text-color); padding: 15px; }
+
+    .container { max-width: 1100px; margin: 0 auto; background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
     
-    /* Navigatie Tabs */
-    .tabs { display: flex; gap: 5px; margin-bottom: 15px; background: #e0e0e0; padding: 4px; border-radius: 10px; }
-    .tab-btn { flex: 1; padding: 12px 5px; border: none; background: transparent; font-weight: bold; border-radius: 8px; font-size: 15px; cursor: pointer; }
-    .tab-btn.active { background: #ffffff; color: #007bff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    h1 { color: var(--primary); margin-bottom: 15px; font-size: 1.5rem; border-bottom: 2px solid #eee; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
     
-    /* Inhoud per tab */
-    .tab-content { display: none; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 10px; flex-wrap: wrap; }
+    .tab-btn { background: #e2e8f0; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.95rem; transition: background 0.2s; }
+    .tab-btn.active { background: var(--primary); color: white; }
+
+    .tab-content { display: none; }
     .tab-content.active { display: block; }
-    
-    /* Formulieren */
-    h2 { margin-top: 0; color: #111; font-size: 20px; }
-    label { display: block; margin-top: 12px; font-weight: 600; font-size: 14px; }
-    input, select { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; background-color: white; }
-    
-    /* Snelle Knoppen voor ML */
-    .quick-ml { display: flex; gap: 6px; margin-top: 8px; }
-    .quick-ml button { flex: 1; padding: 10px 4px; background: #e9ecef; border: 1px solid #ced4da; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
-    
-    button.submit-btn { width: 100%; margin-top: 20px; padding: 14px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
-    button.submit-btn:disabled { background: #888; }
-    
-    /* Limiet & Progress Bar Box op Invoerscherm */
-    .limiet-box { background: #eef6ff; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #b6d4fe; }
-    .limiet-box label { margin-top: 0; }
-    
-    .progress-container { width: 100%; background-color: #e9ecef; border-radius: 10px; height: 26px; margin-top: 10px; overflow: hidden; position: relative; box-shadow: inset 0 1px 3px rgba(0,0,0,0.15); }
-    .progress-bar { height: 100%; width: 0%; transition: width 0.4s ease, background-color 0.4s ease; border-radius: 10px; }
-    .progress-text { position: absolute; width: 100%; text-align: center; top: 4px; font-size: 13px; font-weight: bold; color: #111; }
-    
-    .bg-groen { background-color: #28a745; }
-    .bg-oranje { background-color: #ffc107; }
-    .bg-rood { background-color: #dc3545; }
 
-    /* Tabel */
-    .table-responsive { overflow-x: auto; margin-top: 10px; }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 500px; }
-    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #ddd; vertical-align: middle; }
-    th { background-color: #f8f9fa; font-size: 13px; color: #555; }
-    
-    /* Status Badges */
-    .badge { display: inline-block; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 12px; }
-    .badge-groen { background-color: #d4edda; color: #155724; }
-    .badge-oranje { background-color: #fff3cd; color: #856404; }
-    .badge-rood { background-color: #f8d7da; color: #721c24; }
+    /* Voortgangsbalk 1000ml */
+    .progress-box { background: #e9ecef; border-radius: 8px; padding: 15px; margin-bottom: 20px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); }
+    .progress-info { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 8px; font-size: 1rem; }
+    .progress-bar-container { width: 100%; background: #cbd5e1; height: 20px; border-radius: 10px; overflow: hidden; }
+    .progress-bar { height: 100%; width: 0%; background: var(--success); transition: width 0.3s, background 0.3s; }
 
-    .btn-actie { padding: 6px 10px; border: none; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; margin-right: 4px; }
-    .btn-edit { background-color: #ffc107; color: #212529; }
-    .btn-delete { background-color: #dc3545; color: white; }
+    /* POS Tegels Grid */
+    .pos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .pos-tile { background: #ffffff; border: 2px solid var(--border-color); border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: space-between; height: 130px; box-shadow: 0 2px 5px rgba(0,0,0,0.04); }
+    .pos-tile:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,86,179,0.15); }
+    .pos-tile img { width: 55px; height: 55px; object-fit: contain; border-radius: 6px; margin-bottom: 6px; }
+    .pos-tile span { font-size: 0.85rem; font-weight: bold; color: #1e293b; line-height: 1.1; }
+
+    /* Modal / Pop-up voor hoeveelheid kiezen */
+    .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 15px; }
+    .modal { background: white; padding: 25px; border-radius: 12px; width: 100%; max-width: 400px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); text-align: center; }
+    .modal h3 { margin-bottom: 15px; color: var(--primary); }
+    .amount-buttons { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
+    .amount-btn { background: #f1f5f9; border: 1px solid var(--border-color); padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: background 0.2s; }
+    .amount-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+    .custom-amount-box { display: flex; gap: 8px; margin-bottom: 15px; }
+    .custom-amount-box input { flex: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 1rem; }
+
+    .btn { background: var(--primary); color: white; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-size: 0.95rem; font-weight: bold; transition: background 0.2s; }
+    .btn:hover { background: var(--primary-dark); }
+    .btn-danger { background: var(--danger); }
+    .btn-danger:hover { background: #bd2130; }
+    .btn-excel { background: #1f7344; }
+    .btn-excel:hover { background: #15572b; }
+    .btn-secondary { background: #6c757d; }
+    .btn-secondary:hover { background: #5a6268; }
+
+    /* Tabellen & Beheer */
+    .table-container { overflow-x: auto; margin-top: 15px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 600px; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    th { background: var(--primary); color: white; }
+    tr:nth-child(even) { background: #f8fafc; }
+
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-bottom: 15px; }
+    .form-group { display: flex; flex-direction: column; }
+    label { font-weight: bold; margin-bottom: 6px; font-size: 0.9rem; }
+    input, select { padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.95rem; background: #fff; }
+
+    .drink-preview { width: 50px; height: 50px; object-fit: contain; border-radius: 6px; border: 1px solid #ddd; }
+
+    /* Logo / Icoon Kiezer Galerij */
+    .icon-picker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); gap: 8px; max-height: 180px; overflow-y: auto; border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; background: #fafafa; margin-bottom: 15px; }
+    .icon-option { border: 2px solid transparent; border-radius: 6px; padding: 5px; cursor: pointer; text-align: center; background: white; transition: all 0.2s; }
+    .icon-option:hover, .icon-option.selected { border-color: var(--primary); background: #e6f0fa; }
+    .icon-option img { width: 40px; height: 40px; object-fit: contain; }
   </style>
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0056b3">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="apple-touch-icon" href="icon-192.png">
 </head>
 <body>
 
-  <!-- Tab Knoppen -->
-  <div class="tabs">
-    <button class="tab-btn active" onclick="openTab('invoer')">💧 Drinken Invoeren</button>
-    <button class="tab-btn" onclick="openTab('historie')">📋 Vocht Overzicht</button>
+<div class="container">
+  <h1>
+    <span>POS Vocht Intake & Beheer (Limiet 1000ml)</span>
+    <span id="currentDateLabel" style="font-size: 0.9rem; font-weight: normal; color: #555;">Vandaag</span>
+  </h1>
+
+  <!-- 1000ml Voortgangsbalk -->
+  <div class="progress-box">
+    <div class="progress-info">
+      <span id="progressText">Totaal Vandaag: 0 ml / 1000 ml</span>
+      <span id="progressPercentage">0%</span>
+    </div>
+    <div class="progress-bar-container">
+      <div id="progressBar" class="progress-bar"></div>
+    </div>
   </div>
 
-  <!-- Tab 1: Drinken Invoeren -->
-  <div id="tab-invoer" class="tab-content active">
-    
-    <!-- Progress Bar Direct bij Invoer -->
-    <div class="limiet-box">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <label style="margin: 0;">Vocht Vandaag (Limiet: <span id="limietLabel">1000</span> ml)</label>
-        <button onclick="laadGegevens()" style="padding: 4px 8px; font-size: 12px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">🔄</button>
-      </div>
-      
-      <div class="progress-container">
-        <div id="progressBar" class="progress-bar bg-groen"></div>
-        <div id="progressText" class="progress-text">Laden...</div>
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('posTab', this)">POS Bestelpaneel</button>
+    <button class="tab-btn" onclick="switchTab('logTab', this)">Inname Overzicht & Export</button>
+    <button class="tab-btn" onclick="switchTab('manageDrinksTab', this)">Dranken Beheren & Logo's</button>
+    <button class="tab-btn" onclick="switchTab('manageAmountsTab', this)">Vaste Hoeveelheden Beheren</button>
+  </div>
+
+  <!-- TAB 1: POS BESTELPANEEL -->
+  <div id="posTab" class="tab-content active">
+    <h3 style="margin-bottom: 15px; color: #333;">Tik op een drankje om toe te voegen aan je inname:</h3>
+    <div id="posGrid" class="pos-grid">
+      <!-- Wordt dynamisch ingeladen -->
+    </div>
+  </div>
+
+  <!-- TAB 2: INNAME OVERZICHT & EXPORT -->
+  <div id="logTab" class="tab-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+      <h3 style="color: #333;">Vandaag Ingedrukte / Genomen Dranken</h3>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button class="btn btn-excel" onclick="exportToExcel()">Exporteer naar Excel (.xlsx)</button>
+        <button class="btn btn-secondary" onclick="exportPDF()">Print / PDF</button>
       </div>
     </div>
 
-    <h2>Vocht Loggen</h2>
-    <form id="formDrinken">
-      
-      <label>Soort Drinken</label>
-      <select id="soortDrinken" required>
-        <option value="" disabled selected>Kies drank type...</option>
-        <option value="Water">Water</option>
-        <option value="Koffie">Koffie</option>
-        <option value="Thee">Thee</option>
-        <option value="Frisdrank / Sap">Frisdrank / Sap</option>
-        <option value="Melk / Zuiveldrank">Melk / Zuiveldrank</option>
-        <option value="Soep / Bouillon">Soep / Bouillon</option>
-        <option value="Medisch / Dialyse Vocht">Medisch / Dialyse Vocht</option>
-        <option value="Overig">Overig</option>
-      </select>
-
-      <label>Hoeveelheid (ml)</label>
-      <input type="number" id="ml" placeholder="200" required>
-      <div class="quick-ml">
-        <button type="button" onclick="setMl(75)">75 ml</button>
-        <button type="button" onclick="setMl(150)">150 ml</button>
-        <button type="button" onclick="setMl(200)">200 ml</button>
-        <button type="button" onclick="setMl(250)">250 ml</button>
-      </div>
-      
-      <label>Optionele Notitie</label>
-      <input type="text" id="notitie" placeholder="bijv. Bij het eten">
-      
-      <button type="submit" class="submit-btn">Opslaan</button>
-    </form>
-  </div>
-
-  <!-- Tab 2: Historie -->
-  <div id="tab-historie" class="tab-content">
-    <h2>Vocht Overzicht Historie</h2>
-    
-    <div style="margin-bottom: 15px;">
-      <label>Dagelijkse Vochtlimiet (ml):</label>
-      <input type="number" id="vochtLimiet" value="1000" onchange="updateLimietEnBalk()">
-    </div>
-
-    <button onclick="laadGegevens()" style="margin-bottom: 12px; padding: 8px 12px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer;">🔄 Verversen</button>
-    
-    <div class="table-responsive">
+    <div class="table-container">
       <table>
         <thead>
           <tr>
-            <th>Datum & Tijd</th>
-            <th>Drank</th>
-            <th>Hoeveelheid</th>
-            <th>Notitie</th>
-            <th>Acties</th>
+            <th>Tijdstip</th>
+            <th>Drankje</th>
+            <th>Hoeveelheid (ml)</th>
+            <th>Actie</th>
           </tr>
         </thead>
-        <tbody id="historieTabel">
-          <tr><td colspan="5">Gegevens laden...</td></tr>
+        <tbody id="logTableBody">
+          <tr><td colspan="4" style="text-align:center;">Geen inname geregistreerd vandaag.</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyv8oB4VKdzq3PAs7ZSSfXtAw2lcoXyMPDpK_fzg48Evi-nQTsjpFnwrYfEGUZj02NvFg/exec';
-    let alleData = [];
-
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(() => {});
-      });
-    }
-
-    // Bij het laden direct gegevens ophalen voor de progress bar
-    window.addEventListener('DOMContentLoaded', () => {
-      laadGegevens();
-    });
-
-    function openTab(tabName) {
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  <!-- TAB 3: DRANKEN BEHEREN & LOGO'S -->
+  <div id="manageDrinksTab" class="tab-content">
+    <h3 style="margin-bottom: 15px; color: #333;">Nieuwe Drank Tegel Toevoegen</h3>
+    <form onsubmit="handleAddDrink(event)" class="form-grid">
+      <div class="form-group">
+        <label>Naam Drankje</label>
+        <input type="text" id="newDrinkName" placeholder="bijv. Latte Macchiato" required>
+      </div>
       
-      document.getElementById('tab-' + tabName).classList.add('active');
-      event.currentTarget.classList.add('active');
-    }
+      <div class="form-group full">
+        <label>Kies een Logo/Icoon uit de bibliotheek (of geef hieronder een eigen URL op)</label>
+        <div id="iconPickerGrid" class="icon-picker-grid">
+          <!-- Wordt gevuld met mooie iconen -->
+        </div>
+      </div>
 
-    function setMl(waarde) {
-      document.getElementById('ml').value = waarde;
-    }
+      <div class="form-group">
+        <label>Geselecteerde Afbeelding / URL</label>
+        <input type="text" id="newDrinkImage" placeholder="Kies hierboven of plak een URL..." required>
+      </div>
 
-    function updateLimietEnBalk() {
-      const limiet = Number(document.getElementById('vochtLimiet').value) || 1000;
-      document.getElementById('limietLabel').innerText = limiet;
-      verwerkEnToonData(alleData);
-    }
+      <div style="display: flex; align-items: flex-end;">
+        <button type="submit" class="btn" style="width: 100%;">Tegel Toevoegen</button>
+      </div>
+    </form>
 
-    // Drinken verzenden
-    document.getElementById('formDrinken').addEventListener('submit', e => {
-      e.preventDefault();
-      
-      const payload = {
-        actie: 'CREATE',
-        soortDrinken: document.getElementById('soortDrinken').value,
-        ml: document.getElementById('ml').value,
-        notitie: document.getElementById('notitie').value
-      };
-
-      const btn = document.querySelector('#formDrinken .submit-btn');
-      btn.disabled = true;
-      btn.innerText = 'Opslaan...';
-
-      fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-      .then(() => {
-        alert('Vocht succesvol opgeslagen!');
-        document.getElementById('formDrinken').reset();
-        laadGegevens(); // Direct progressbar en tabel vernieuwen!
-      })
-      .catch(err => alert('Fout bij opslaan'))
-      .finally(() => {
-        btn.disabled = false;
-        btn.innerText = 'Opslaan';
-      });
-    });
-
-    // Gegevens Ophalen
-    function laadGegevens() {
-      fetch(SCRIPT_URL)
-      .then(res => res.json())
-      .then(data => {
-        alleData = data || [];
-        verwerkEnToonData(alleData);
-      })
-      .catch(err => {
-        document.getElementById('progressText').innerText = "Fout bij laden";
-      });
-    }
-
-    // Gegevens verwerken (Progress bar + Historietabel)
-    function verwerkEnToonData(data) {
-      const limiet = Number(document.getElementById('vochtLimiet').value) || 1000;
-      const tbody = document.getElementById('historieTabel');
-      tbody.innerHTML = '';
-
-      if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5">Nog geen vocht gelogd.</td></tr>';
-        updateProgressBar(0, limiet);
-        return;
-      }
-
-      // Huidige datum bepalen (formaat: d-m-yyyy of dd-mm-yyyy)
-      const nu = new Date();
-      const dag = String(nu.getDate()).padStart(2, '0');
-      const maand = String(nu.getMonth() + 1).padStart(2, '0');
-      const jaar = nu.getFullYear();
-      const vandaagFormatted = `${dag}-${maand}-${jaar}`;
-
-      let dagTotalen = {};
-      let totaalVandaag = 0;
-
-      data.forEach(row => {
-        let d = row.datum || '';
-        if (d.includes('T')) d = new Date(d).toLocaleDateString('nl-NL');
-        
-        // Zorg dat datumnotaties exact overeenkomen
-        d = d.replace(/'/g, '').trim();
-
-        const ml = Number(row.ml) || 0;
-        dagTotalen[d] = (dagTotalen[d] || 0) + ml;
-        
-        // Controleer of de meting van vandaag is
-        if (d === vandaagFormatted || d === nu.toLocaleDateString('nl-NL')) {
-          totaalVandaag += ml;
-        }
-      });
-
-      // Update de Progress Bar op het invoerscherm
-      updateProgressBar(totaalVandaag, limiet);
-
-      // Historie Tabel Vullen
-      [...data].reverse().forEach(row => {
-        let schoneDatum = row.datum || '';
-        let schoneTijd = row.tijd || '';
-
-        if (schoneDatum.includes('T')) schoneDatum = new Date(schoneDatum).toLocaleDateString('nl-NL');
-        if (schoneTijd.includes('T')) schoneTijd = new Date(schoneTijd).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
-
-        schoneDatum = schoneDatum.replace(/'/g, '').trim();
-        schoneTijd = schoneTijd.replace(/'/g, '').trim();
-
-        const totaalOpDag = dagTotalen[schoneDatum] || 0;
-        let badgeKlasse = 'badge-groen';
-        if (totaalOpDag >= limiet) badgeKlasse = 'badge-rood';
-        else if (totaalOpDag >= limiet * 0.85) badgeKlasse = 'badge-oranje';
-
-        tbody.innerHTML += `
+    <h3 style="margin: 20px 0 15px 0; color: #333;">Bestaande Drank Tegels</h3>
+    <div class="table-container">
+      <table>
+        <thead>
           <tr>
-            <td><small style="color: #666;">${schoneDatum}</small><br><b>${schoneTijd}</b></td>
-            <td><b>${row.soortDrinken}</b></td>
-            <td><b>${row.ml} ml</b><br><span class="badge ${badgeKlasse}">${totaalOpDag}/${limiet} ml</span></td>
-            <td>${row.notitie || '-'}</td>
-            <td style="white-space: nowrap;">
-              <button class="btn-actie btn-edit" onclick="bewerkRegel(${row.rowIndex}, '${row.soortDrinken}', '${row.ml}', '${row.notitie}')">✏️</button>
-              <button class="btn-actie btn-delete" onclick="verwijderRegel(${row.rowIndex})">🗑️</button>
-            </td>
+            <th>Afbeelding</th>
+            <th>Naam</th>
+            <th>Actie</th>
           </tr>
-        `;
-      });
-    }
+        </thead>
+        <tbody id="drinksTableBody">
+          <!-- Wordt dynamisch ingeladen -->
+        </tbody>
+      </table>
+    </div>
+  </div>
 
-    // Update Progress Bar Functie
-    function updateProgressBar(totaal, limiet) {
-      const percentage = Math.min(Math.round((totaal / limiet) * 100), 100);
-      const progressBar = document.getElementById('progressBar');
-      const progressText = document.getElementById('progressText');
+  <!-- TAB 4: VASTE HOEVEELHEDEN BEHEREN -->
+  <div id="manageAmountsTab" class="tab-content">
+    <h3 style="margin-bottom: 15px; color: #333;">Nieuwe Vaste Hoeveelheid Toevoegen (ml)</h3>
+    <form onsubmit="handleAddAmount(event)" class="form-grid">
+      <div class="form-group">
+        <label>Hoeveelheid in ml</label>
+        <input type="number" id="newAmountVal" placeholder="bijv. 250" required>
+      </div>
+      <div style="display: flex; align-items: flex-end;">
+        <button type="submit" class="btn" style="width: 100%;">Hoeveelheid Toevoegen</button>
+      </div>
+    </form>
 
-      progressBar.style.width = percentage + '%';
-      progressText.innerText = `${totaal} / ${limiet} ml (${Math.round((totaal / limiet) * 100)}%)`;
+    <h3 style="margin: 20px 0 15px 0; color: #333;">Bestaande Vaste Hoeveelheden</h3>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Hoeveelheid (ml)</th>
+            <th>Actie</th>
+          </tr>
+        </thead>
+        <tbody id="amountsTableBody">
+          <!-- Wordt dynamisch ingeladen -->
+        </tbody>
+      </table>
+    </div>
+  </div>
 
-      progressBar.className = 'progress-bar';
-      if (totaal >= limiet) {
-        progressBar.classList.add('bg-rood');
-      } else if (totaal >= limiet * 0.85) {
-        progressBar.classList.add('bg-oranje');
+</div>
+
+<!-- HOEVEELHEID KIEZEN MODAL -->
+<div id="amountModal" class="modal-overlay">
+  <div class="modal">
+    <h3 id="modalDrinkTitle">Drankje</h3>
+    <p style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">Kies een vaste hoeveelheid of vul een eigen waarde in:</p>
+    
+    <div id="amountButtonsContainer" class="amount-buttons">
+      <!-- Dynamische vaste hoeveelheden knoppen -->
+    </div>
+
+    <div class="custom-amount-box">
+      <input type="number" id="customAmountInput" placeholder="Aangepast ml...">
+      <button class="btn" onclick="submitCustomAmount()">Toevoegen</button>
+    </div>
+
+    <button class="btn btn-secondary" style="width: 100%; margin-top: 10px;" onclick="closeModal()">Annuleren</button>
+  </div>
+</div>
+
+<script>
+  // Jouw Firebase configuratie
+  const firebaseConfig = {
+    apiKey: "AIzaSyBWaKFaJ1sUhSvXqK2pOCSDwJ3eMqDJag8",
+    authDomain: "dialysedbase.firebaseapp.com",
+    projectId: "dialysedbase",
+    storageBucket: "dialysedbase.firebasestorage.app",
+    messagingSenderId: "36507381882",
+    appId: "1:36507381882:web:6cf9725f87c963c51ccbc3"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  // Bibliotheek van consistente, stijlvolle drank-logo's/iconen
+  const logoLibrary = [
+    { name: "Koffie / Cappuccino", url: "https://cdn-icons-png.flaticon.com/512/924/924514.png" },
+    { name: "Senseo / Pad", url: "https://cdn-icons-png.flaticon.com/512/2809/2809593.png" },
+    { name: "Koffieautomaat", url: "https://cdn-icons-png.flaticon.com/512/3074/3074757.png" },
+    { name: "Espresso", url: "https://cdn-icons-png.flaticon.com/512/3256/3256037.png" },
+    { name: "Creamkoffie", url: "https://cdn-icons-png.flaticon.com/512/2644/2644265.png" },
+    { name: "Thee", url: "https://cdn-icons-png.flaticon.com/512/2405/2405543.png" },
+    { name: "Vruchtenthee", url: "https://cdn-icons-png.flaticon.com/512/2935/2935302.png" },
+    { name: "Water", url: "https://cdn-icons-png.flaticon.com/512/3105/3105805.png" },
+    { name: "Cola / Frisdrank", url: "https://cdn-icons-png.flaticon.com/512/2405/2405451.png" },
+    { name: "Sinas / Oranje", url: "https://cdn-icons-png.flaticon.com/512/2738/2738596.png" },
+    { name: "7Up / Lemon", url: "https://cdn-icons-png.flaticon.com/512/2738/2738590.png" },
+    { name: "Ranja / Limonade", url: "https://cdn-icons-png.flaticon.com/512/3050/3050393.png" },
+    { name: "Casis / Bessen", url: "https://cdn-icons-png.flaticon.com/512/2738/2738595.png" },
+    { name: "Breezer / Mix", url: "https://cdn-icons-png.flaticon.com/512/2738/2738591.png" },
+    { name: "Bubbeltjeswijn / Champagne", url: "https://cdn-icons-png.flaticon.com/512/815/815437.png" },
+    { name: "Glas Bier", url: "https://cdn-icons-png.flaticon.com/512/931/931949.png" },
+    { name: "Fles Bier", url: "https://cdn-icons-png.flaticon.com/512/2738/2738587.png" },
+    { name: "Sap / Smoothie", url: "https://cdn-icons-png.flaticon.com/512/2935/2935315.png" },
+    { name: "Melk", url: "https://cdn-icons-png.flaticon.com/512/2682/2682445.png" }
+  ];
+
+  // Standaard dranken
+  const defaultDrinks = [
+    { name: "Cappuccino", image: "https://cdn-icons-png.flaticon.com/512/924/924514.png" },
+    { name: "Senseo", image: "https://cdn-icons-png.flaticon.com/512/2809/2809593.png" },
+    { name: "Automaten koffie", image: "https://cdn-icons-png.flaticon.com/512/3074/3074757.png" },
+    { name: "Espresso", image: "https://cdn-icons-png.flaticon.com/512/3256/3256037.png" },
+    { name: "Creamkoffie", image: "https://cdn-icons-png.flaticon.com/512/2644/2644265.png" },
+    { name: "Thee", image: "https://cdn-icons-png.flaticon.com/512/2405/2405543.png" },
+    { name: "Vruchtenthee", image: "https://cdn-icons-png.flaticon.com/512/2935/2935302.png" },
+    { name: "Water", image: "https://cdn-icons-png.flaticon.com/512/3105/3105805.png" },
+    { name: "Cola", image: "https://cdn-icons-png.flaticon.com/512/2405/2405451.png" },
+    { name: "Sinas", image: "https://cdn-icons-png.flaticon.com/512/2738/2738596.png" },
+    { name: "7Up", image: "https://cdn-icons-png.flaticon.com/512/2738/2738590.png" },
+    { name: "Ranja", image: "https://cdn-icons-png.flaticon.com/512/3050/3050393.png" },
+    { name: "Casis", image: "https://cdn-icons-png.flaticon.com/512/2738/2738595.png" },
+    { name: "Breezer", image: "https://cdn-icons-png.flaticon.com/512/2738/2738591.png" },
+    { name: "Bubbeltjeswijn", image: "https://cdn-icons-png.flaticon.com/512/815/815437.png" },
+    { name: "Glas bier", image: "https://cdn-icons-png.flaticon.com/512/931/931949.png" },
+    { name: "Fles bier", image: "https://cdn-icons-png.flaticon.com/512/2738/2738587.png" }
+  ];
+
+  let drinksList = [];
+  let amountsList = [75, 150, 200, 250, 300, 500];
+  let todayIntake = [];
+  let selectedDrinkForModal = null;
+
+  window.onload = function() {
+    const todayStr = new Date().toLocaleDateString('nl-NL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    document.getElementById('currentDateLabel').innerText = todayStr;
+
+    renderIconPicker();
+    loadSettingsAndData();
+  };
+
+  function renderIconPicker() {
+    const grid = document.getElementById('iconPickerGrid');
+    grid.innerHTML = '';
+
+    logoLibrary.forEach(item => {
+      const opt = document.createElement('div');
+      opt.className = 'icon-option';
+      opt.title = item.name;
+      opt.onclick = () => selectLogo(item.url, opt);
+      opt.innerHTML = `<img src="${item.url}" alt="${item.name}">`;
+      grid.appendChild(opt);
+    });
+  }
+
+  function selectLogo(url, element) {
+    document.querySelectorAll('.icon-option').forEach(el => el.classList.remove('selected'));
+    element.classList.add('selected');
+    document.getElementById('newDrinkImage').value = url;
+  }
+
+  function loadSettingsAndData() {
+    // Zet direct standaardwaarden zodat de app onmiddellijk laadt
+    drinksList = defaultDrinks;
+    amountsList = [75, 150, 200, 250, 300, 500];
+    renderPOSGrid();
+    renderDrinksTable();
+    renderAmountsTable();
+
+    // Haal daarna live instellingen op uit Firebase
+    db.collection('vocht_settings').doc('config').get().then(doc => {
+      if (doc.exists) {
+        const data = doc.data();
+        if (data.drinks && data.drinks.length > 0) drinksList = data.drinks;
+        if (data.amounts && data.amounts.length > 0) amountsList = data.amounts;
+        renderPOSGrid();
+        renderDrinksTable();
+        renderAmountsTable();
       } else {
-        progressBar.classList.add('bg-groen');
+        db.collection('vocht_settings').doc('config').set({ drinks: drinksList, amounts: amountsList }).catch(e => console.log(e));
       }
+    }).catch(err => {
+      console.log("Firebase laadfout, standaards gebruikt:", err);
+    });
+
+    loadTodayIntake();
+  }
+
+  function loadTodayIntake() {
+    const todayKey = new Date().toISOString().slice(0, 10);
+    db.collection('vocht_intake').where('dateKey', '==', todayKey).orderBy('timestamp', 'desc').get().then(snapshot => {
+      todayIntake = [];
+      snapshot.forEach(doc => {
+        todayIntake.push({ id: doc.id, ...doc.data() });
+      });
+      renderIntakeLog();
+      updateProgressBar();
+    }).catch(err => {
+      console.log("Geen inname records of geen verbinding:", err);
+    });
+  }
+
+  // --- POS GRID & MODAL ---
+  function renderPOSGrid() {
+    const grid = document.getElementById('posGrid');
+    grid.innerHTML = '';
+
+    drinksList.forEach(drink => {
+      const tile = document.createElement('div');
+      tile.className = 'pos-tile';
+      tile.onclick = () => openAmountModal(drink);
+      tile.innerHTML = `
+        <img src="${drink.image}" alt="${drink.name}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3105/3105805.png'">
+        <span>${drink.name}</span>
+      `;
+      grid.appendChild(tile);
+    });
+  }
+
+  function openAmountModal(drink) {
+    selectedDrinkForModal = drink;
+    document.getElementById('modalDrinkTitle').innerText = drink.name;
+    
+    const container = document.getElementById('amountButtonsContainer');
+    container.innerHTML = '';
+
+    amountsList.sort((a,b) => a - b).forEach(amt => {
+      const btn = document.createElement('button');
+      btn.className = 'amount-btn';
+      btn.innerText = `${amt} ml`;
+      btn.onclick = () => addIntake(amt);
+      container.appendChild(btn);
+    });
+
+    document.getElementById('customAmountInput').value = '';
+    document.getElementById('amountModal').style.display = 'flex';
+  }
+
+  function closeModal() {
+    document.getElementById('amountModal').style.display = 'none';
+    selectedDrinkForModal = null;
+  }
+
+  function submitCustomAmount() {
+    const val = parseInt(document.getElementById('customAmountInput').value);
+    if (!isNaN(val) && val > 0) {
+      addIntake(val);
+    } else {
+      alert("Vul een geldig aantal ml in.");
     }
+  }
 
-    function bewerkRegel(rowIndex, oudeSoort, oudMl, oudeNotitie) {
-      const nieuwSoort = prompt("Soort Drinken:", oudeSoort);
-      if (nieuwSoort === null) return;
+  function addIntake(amount) {
+    if (!selectedDrinkForModal) return;
 
-      const nieuwMl = prompt("Hoeveelheid (ml):", oudMl);
-      if (nieuwMl === null) return;
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+    const dateKey = now.toISOString().slice(0, 10);
 
-      const nieuwNotitie = prompt("Notitie:", oudeNotitie);
-      if (nieuwNotitie === null) return;
+    const intakeRecord = {
+      drinkName: selectedDrinkForModal.name,
+      drinkImage: selectedDrinkForModal.image,
+      amount: amount,
+      time: timeStr,
+      dateKey: dateKey,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    };
 
-      const payload = { actie: 'EDIT', rowIndex: rowIndex, soortDrinken: nieuwSoort, ml: nieuwMl, notitie: nieuwNotitie };
+    db.collection('vocht_intake').add(intakeRecord).then(() => {
+      closeModal();
+      loadTodayIntake();
+    }).catch(err => {
+      alert("Fout bij opslaan inname: " + err.message);
+    });
+  }
 
-      fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      }).then(() => {
-        alert('Regel bijgewerkt!');
-        laadGegevens();
+  function deleteIntake(id) {
+    if (confirm("Weet je zeker dat je dit innamerecord wilt verwijderen?")) {
+      db.collection('vocht_intake').doc(id).delete().then(() => {
+        loadTodayIntake();
       });
     }
+  }
 
-    function verwijderRegel(rowIndex) {
-      if (confirm("Weet je zeker dat je deze invoer wilt verwijderen?")) {
-        const payload = { actie: 'DELETE', rowIndex: rowIndex };
-        fetch(SCRIPT_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        }).then(() => {
-          alert('Regel verwijderd!');
-          laadGegevens();
-        });
-      }
+  // --- VOORTGANGSBALK 1000ml ---
+  function updateProgressBar() {
+    let totalMl = todayIntake.reduce((sum, item) => sum + (parseInt(item.amount) || 0), 0);
+    let percentage = Math.min(Math.round((totalMl / 1000) * 100), 100);
+
+    document.getElementById('progressText').innerText = `Totaal Vandaag: ${totalMl} ml / 1000 ml`;
+    document.getElementById('progressPercentage').innerText = `${percentage}%`;
+
+    const bar = document.getElementById('progressBar');
+    bar.style.width = `${percentage}%`;
+
+    if (totalMl > 1000) {
+      bar.style.background = 'var(--danger)';
+    } else if (totalMl >= 800) {
+      bar.style.background = 'var(--warning)';
+    } else {
+      bar.style.background = 'var(--success)';
     }
-  </script>
+  }
+
+  function renderIntakeLog() {
+    const tbody = document.getElementById('logTableBody');
+    tbody.innerHTML = '';
+
+    if (todayIntake.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Geen inname geregistreerd vandaag.</td></tr>';
+      return;
+    }
+
+    todayIntake.forEach(item => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${item.time || '-'}</td>
+        <td style="display: flex; align-items: center; gap: 10px;">
+          <img src="${item.drinkImage}" class="drink-preview" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3105/3105805.png'">
+          <b>${item.drinkName}</b>
+        </td>
+        <td><b>${item.amount} ml</b></td>
+        <td>
+          <button class="btn btn-danger btn-sm" style="padding: 5px 10px; font-size: 0.8rem;" onclick="deleteIntake('${item.id}')">Verwijderen</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // --- BEHEER DRANKEN ---
+  function handleAddDrink(event) {
+    event.preventDefault();
+    const name = document.getElementById('newDrinkName').value.trim();
+    const image = document.getElementById('newDrinkImage').value.trim();
+
+    if (!name || !image) {
+      alert("Vul een naam in en kies of geef een afbeelding op.");
+      return;
+    }
+
+    drinksList.push({ name, image });
+    saveSettingsToFirebase(() => {
+      document.getElementById('newDrinkName').value = '';
+      document.getElementById('newDrinkImage').value = '';
+      document.querySelectorAll('.icon-option').forEach(el => el.classList.remove('selected'));
+      renderPOSGrid();
+      renderDrinksTable();
+      alert("Dranktegel succesvol toegevoegd!");
+    });
+  }
+
+  function deleteDrink(index) {
+    if (confirm("Weet je zeker dat je deze dranktegel wilt verwijderen?")) {
+      drinksList.splice(index, 1);
+      saveSettingsToFirebase(() => {
+        renderPOSGrid();
+        renderDrinksTable();
+      });
+    }
+  }
+
+  function renderDrinksTable() {
+    const tbody = document.getElementById('drinksTableBody');
+    tbody.innerHTML = '';
+
+    drinksList.forEach((drink, index) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><img src="${drink.image}" class="drink-preview" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3105/3105805.png'"></td>
+        <td><b>${drink.name}</b></td>
+        <td>
+          <button class="btn btn-danger btn-sm" style="padding: 5px 10px; font-size: 0.8rem;" onclick="deleteDrink(${index})">Verwijderen</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // --- BEHEER HOEVEELHEDEN ---
+  function handleAddAmount(event) {
+    event.preventDefault();
+    const val = parseInt(document.getElementById('newAmountVal').value);
+
+    if (!isNaN(val) && val > 0 && !amountsList.includes(val)) {
+      amountsList.push(val);
+      saveSettingsToFirebase(() => {
+        document.getElementById('newAmountVal').value = '';
+        renderAmountsTable();
+        alert("Hoeveelheid succesvol toegevoegd!");
+      });
+    } else {
+      alert("Ongeldige of reeds bestaande hoeveelheid.");
+    }
+  }
+
+  function deleteAmount(index) {
+    if (amountsList.length <= 1) {
+      alert("Je moet tenminste één vaste hoeveelheid behouden.");
+      return;
+    }
+    if (confirm("Weet je zeker dat je deze hoeveelheid wilt verwijderen?")) {
+      amountsList.splice(index, 1);
+      saveSettingsToFirebase(() => {
+        renderAmountsTable();
+      });
+    }
+  }
+
+  function renderAmountsTable() {
+    const tbody = document.getElementById('amountsTableBody');
+    tbody.innerHTML = '';
+
+    amountsList.sort((a,b) => a - b).forEach((amt, index) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><b>${amt} ml</b></td>
+        <td>
+          <button class="btn btn-danger btn-sm" style="padding: 5px 10px; font-size: 0.8rem;" onclick="deleteAmount(${index})">Verwijderen</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function saveSettingsToFirebase(callback) {
+    db.collection('vocht_settings').doc('config').set({
+      drinks: drinksList,
+      amounts: amountsList
+    }).then(() => {
+      if (callback) callback();
+    }).catch(err => {
+      alert("Fout bij opslaan instellingen: " + err.message);
+    });
+  }
+
+  function switchTab(tabId, btn) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  function exportToExcel() {
+    if (!todayIntake || todayIntake.length === 0) {
+      alert("Geen inname gegevens voor vandaag om te exporteren.");
+      return;
+    }
+
+    let excelData = todayIntake.map(item => ({
+      "Datum": item.dateKey,
+      "Tijdstip": item.time,
+      "Drankje": item.drinkName,
+      "Hoeveelheid (ml)": item.amount
+    }));
+
+    let worksheet = XLSX.utils.json_to_sheet(excelData);
+    let workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "VochtInname Vandaag");
+
+    XLSX.writeFile(workbook, `Vocht_Inname_${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
+
+  function exportPDF() {
+    window.print();
+  }
+</script>
+
 </body>
 </html>
