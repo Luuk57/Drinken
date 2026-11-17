@@ -47,9 +47,9 @@
 
     /* POS Tegels Grid */
     .pos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; margin-bottom: 20px; }
-    .pos-tile { background: #ffffff; border: 2px solid var(--border-color); border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: space-between; height: 130px; box-shadow: 0 2px 5px rgba(0,0,0,0.04); }
+    .pos-tile { background: #ffffff; border: 2px solid var(--border-color); border-radius: 10px; padding: 10px; text-align: center; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: space-between; height: 140px; box-shadow: 0 2px 5px rgba(0,0,0,0.04); }
     .pos-tile:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,86,179,0.15); }
-    .pos-tile img { width: 55px; height: 55px; object-fit: contain; border-radius: 6px; margin-bottom: 6px; }
+    .pos-tile img { width: 65px; height: 65px; object-fit: cover; border-radius: 8px; margin-bottom: 6px; border: 1px solid #e2e8f0; }
     .pos-tile span { font-size: 0.85rem; font-weight: bold; color: #1e293b; line-height: 1.1; }
 
     /* Modal / Pop-up voor hoeveelheid kiezen */
@@ -83,13 +83,14 @@
     label { font-weight: bold; margin-bottom: 6px; font-size: 0.9rem; }
     input, select { padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.95rem; background: #fff; }
 
-    .drink-preview { width: 50px; height: 50px; object-fit: contain; border-radius: 6px; border: 1px solid #ddd; }
+    .drink-preview { width: 50px; height: 50px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; }
 
-    /* Logo / Icoon Kiezer Galerij */
-    .icon-picker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); gap: 8px; max-height: 180px; overflow-y: auto; border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; background: #fafafa; margin-bottom: 15px; }
-    .icon-option { border: 2px solid transparent; border-radius: 6px; padding: 5px; cursor: pointer; text-align: center; background: white; transition: all 0.2s; }
+    /* Foto Kiezer Galerij */
+    .icon-picker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; max-height: 220px; overflow-y: auto; border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; background: #fafafa; margin-bottom: 15px; }
+    .icon-option { border: 2px solid transparent; border-radius: 8px; padding: 5px; cursor: pointer; text-align: center; background: white; transition: all 0.2s; }
     .icon-option:hover, .icon-option.selected { border-color: var(--primary); background: #e6f0fa; }
-    .icon-option img { width: 40px; height: 40px; object-fit: contain; }
+    .icon-option img { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; }
+    .icon-option span { font-size: 0.75rem; display: block; margin-top: 3px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   </style>
 
   <!-- PWA Manifest -->
@@ -102,7 +103,7 @@
 
 <div class="container">
   <h1>
-    <span>POS Vocht Intake & Beheer (Limiet 1000ml)</span>
+    <span>POS Vocht Intake & Beheer (1000ml Limiet)</span>
     <span id="currentDateLabel" style="font-size: 0.9rem; font-weight: normal; color: #555;">Vandaag</span>
   </h1>
 
@@ -120,7 +121,7 @@
   <div class="nav-tabs">
     <button class="tab-btn active" onclick="switchTab('posTab', this)">POS Bestelpaneel</button>
     <button class="tab-btn" onclick="switchTab('logTab', this)">Inname Overzicht & Export</button>
-    <button class="tab-btn" onclick="switchTab('manageDrinksTab', this)">Dranken Beheren & Logo's</button>
+    <button class="tab-btn" onclick="switchTab('manageDrinksTab', this)">Dranken Beheren & Foto's</button>
     <button class="tab-btn" onclick="switchTab('manageAmountsTab', this)">Vaste Hoeveelheden Beheren</button>
   </div>
 
@@ -159,7 +160,7 @@
     </div>
   </div>
 
-  <!-- TAB 3: DRANKEN BEHEREN & LOGO'S -->
+  <!-- TAB 3: DRANKEN BEHEREN & FOTO'S -->
   <div id="manageDrinksTab" class="tab-content">
     <h3 style="margin-bottom: 15px; color: #333;">Nieuwe Drank Tegel Toevoegen</h3>
     <form onsubmit="handleAddDrink(event)" class="form-grid">
@@ -169,15 +170,15 @@
       </div>
       
       <div class="form-group full">
-        <label>Kies een Logo/Icoon uit de bibliotheek (of geef hieronder een eigen URL op)</label>
+        <label>Kies een levensechte foto uit de bibliotheek (of plak hieronder een eigen afbeeldings-URL)</label>
         <div id="iconPickerGrid" class="icon-picker-grid">
-          <!-- Wordt gevuld met mooie iconen -->
+          <!-- Wordt gevuld met foto's -->
         </div>
       </div>
 
       <div class="form-group">
-        <label>Geselecteerde Afbeelding / URL</label>
-        <input type="text" id="newDrinkImage" placeholder="Kies hierboven of plak een URL..." required>
+        <label>Geselecteerde Foto URL</label>
+        <input type="text" id="newDrinkImage" placeholder="Kies hierboven een foto of plak een URL..." required>
       </div>
 
       <div style="display: flex; align-items: flex-end;">
@@ -266,48 +267,46 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
 
-  // Bibliotheek van consistente, stijlvolle drank-logo's/iconen
-  const logoLibrary = [
-    { name: "Koffie / Cappuccino", url: "https://cdn-icons-png.flaticon.com/512/924/924514.png" },
-    { name: "Senseo / Pad", url: "https://cdn-icons-png.flaticon.com/512/2809/2809593.png" },
-    { name: "Koffieautomaat", url: "https://cdn-icons-png.flaticon.com/512/3074/3074757.png" },
-    { name: "Espresso", url: "https://cdn-icons-png.flaticon.com/512/3256/3256037.png" },
-    { name: "Creamkoffie", url: "https://cdn-icons-png.flaticon.com/512/2644/2644265.png" },
-    { name: "Thee", url: "https://cdn-icons-png.flaticon.com/512/2405/2405543.png" },
-    { name: "Vruchtenthee", url: "https://cdn-icons-png.flaticon.com/512/2935/2935302.png" },
-    { name: "Water", url: "https://cdn-icons-png.flaticon.com/512/3105/3105805.png" },
-    { name: "Cola / Frisdrank", url: "https://cdn-icons-png.flaticon.com/512/2405/2405451.png" },
-    { name: "Sinas / Oranje", url: "https://cdn-icons-png.flaticon.com/512/2738/2738596.png" },
-    { name: "7Up / Lemon", url: "https://cdn-icons-png.flaticon.com/512/2738/2738590.png" },
-    { name: "Ranja / Limonade", url: "https://cdn-icons-png.flaticon.com/512/3050/3050393.png" },
-    { name: "Casis / Bessen", url: "https://cdn-icons-png.flaticon.com/512/2738/2738595.png" },
-    { name: "Breezer / Mix", url: "https://cdn-icons-png.flaticon.com/512/2738/2738591.png" },
-    { name: "Bubbeltjeswijn / Champagne", url: "https://cdn-icons-png.flaticon.com/512/815/815437.png" },
-    { name: "Glas Bier", url: "https://cdn-icons-png.flaticon.com/512/931/931949.png" },
-    { name: "Fles Bier", url: "https://cdn-icons-png.flaticon.com/512/2738/2738587.png" },
-    { name: "Sap / Smoothie", url: "https://cdn-icons-png.flaticon.com/512/2935/2935315.png" },
-    { name: "Melk", url: "https://cdn-icons-png.flaticon.com/512/2682/2682445.png" }
+  // Uitgebreide bibliotheek met prachtige, levensechte foto's voor alle dranken
+  const photoLibrary = [
+    { name: "Cappuccino", url: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=300&q=80" },
+    { name: "Senseo", url: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=300&q=80" },
+    { name: "Automaten koffie", url: "https://images.unsplash.com/photo-1517256064527-09c73fc73e38?auto=format&fit=crop&w=300&q=80" },
+    { name: "Espresso", url: "https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04?auto=format&fit=crop&w=300&q=80" },
+    { name: "Creamkoffie", url: "https://images.unsplash.com/photo-1534778101976-62847782c213?auto=format&fit=crop&w=300&q=80" },
+    { name: "Thee", url: "https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&w=300&q=80" },
+    { name: "Vruchtenthee", url: "https://images.unsplash.com/photo-1597481499750-3e6b22637e12?auto=format&fit=crop&w=300&q=80" },
+    { name: "Water", url: "https://images.unsplash.com/photo-1548839140-29a749e1cf4d?auto=format&fit=crop&w=300&q=80" },
+    { name: "Cola", url: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=300&q=80" },
+    { name: "Sinas", url: "https://images.unsplash.com/photo-1629203851122-3726ecdf080e?auto=format&fit=crop&w=300&q=80" },
+    { name: "7Up", url: "https://images.unsplash.com/photo-1625772299848-391b6a87d7b3?auto=format&fit=crop&w=300&q=80" },
+    { name: "Ranja", url: "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=300&q=80" },
+    { name: "Casis", url: "https://images.unsplash.com/photo-1536935338788-846bb9981813?auto=format&fit=crop&w=300&q=80" },
+    { name: "Breezer", url: "https://images.unsplash.com/photo-1563227812-0ea4c22e6cc8?auto=format&fit=crop&w=300&q=80" },
+    { name: "Bubbeltjeswijn", url: "https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=300&q=80" },
+    { name: "Glas bier", url: "https://images.unsplash.com/photo-1535958636474-b021ee887b13?auto=format&fit=crop&w=300&q=80" },
+    { name: "Fles bier", url: "https://images.unsplash.com/photo-1608270105747-23f269a7b1b3?auto=format&fit=crop&w=300&q=80" }
   ];
 
-  // Standaard dranken
+  // Standaard dranken voorzien van deze levensechte foto's
   const defaultDrinks = [
-    { name: "Cappuccino", image: "https://cdn-icons-png.flaticon.com/512/924/924514.png" },
-    { name: "Senseo", image: "https://cdn-icons-png.flaticon.com/512/2809/2809593.png" },
-    { name: "Automaten koffie", image: "https://cdn-icons-png.flaticon.com/512/3074/3074757.png" },
-    { name: "Espresso", image: "https://cdn-icons-png.flaticon.com/512/3256/3256037.png" },
-    { name: "Creamkoffie", image: "https://cdn-icons-png.flaticon.com/512/2644/2644265.png" },
-    { name: "Thee", image: "https://cdn-icons-png.flaticon.com/512/2405/2405543.png" },
-    { name: "Vruchtenthee", image: "https://cdn-icons-png.flaticon.com/512/2935/2935302.png" },
-    { name: "Water", image: "https://cdn-icons-png.flaticon.com/512/3105/3105805.png" },
-    { name: "Cola", image: "https://cdn-icons-png.flaticon.com/512/2405/2405451.png" },
-    { name: "Sinas", image: "https://cdn-icons-png.flaticon.com/512/2738/2738596.png" },
-    { name: "7Up", image: "https://cdn-icons-png.flaticon.com/512/2738/2738590.png" },
-    { name: "Ranja", image: "https://cdn-icons-png.flaticon.com/512/3050/3050393.png" },
-    { name: "Casis", image: "https://cdn-icons-png.flaticon.com/512/2738/2738595.png" },
-    { name: "Breezer", image: "https://cdn-icons-png.flaticon.com/512/2738/2738591.png" },
-    { name: "Bubbeltjeswijn", image: "https://cdn-icons-png.flaticon.com/512/815/815437.png" },
-    { name: "Glas bier", image: "https://cdn-icons-png.flaticon.com/512/931/931949.png" },
-    { name: "Fles bier", image: "https://cdn-icons-png.flaticon.com/512/2738/2738587.png" }
+    { name: "Cappuccino", image: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=300&q=80" },
+    { name: "Senseo", image: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=300&q=80" },
+    { name: "Automaten koffie", image: "https://images.unsplash.com/photo-1517256064527-09c73fc73e38?auto=format&fit=crop&w=300&q=80" },
+    { name: "Espresso", image: "https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04?auto=format&fit=crop&w=300&q=80" },
+    { name: "Creamkoffie", image: "https://images.unsplash.com/photo-1534778101976-62847782c213?auto=format&fit=crop&w=300&q=80" },
+    { name: "Thee", image: "https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&w=300&q=80" },
+    { name: "Vruchtenthee", image: "https://images.unsplash.com/photo-1597481499750-3e6b22637e12?auto=format&fit=crop&w=300&q=80" },
+    { name: "Water", image: "https://images.unsplash.com/photo-1548839140-29a749e1cf4d?auto=format&fit=crop&w=300&q=80" },
+    { name: "Cola", image: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=300&q=80" },
+    { name: "Sinas", image: "https://images.unsplash.com/photo-1629203851122-3726ecdf080e?auto=format&fit=crop&w=300&q=80" },
+    { name: "7Up", image: "https://images.unsplash.com/photo-1625772299848-391b6a87d7b3?auto=format&fit=crop&w=300&q=80" },
+    { name: "Ranja", image: "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=300&q=80" },
+    { name: "Casis", image: "https://images.unsplash.com/photo-1536935338788-846bb9981813?auto=format&fit=crop&w=300&q=80" },
+    { name: "Breezer", image: "https://images.unsplash.com/photo-1563227812-0ea4c22e6cc8?auto=format&fit=crop&w=300&q=80" },
+    { name: "Bubbeltjeswijn", image: "https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=300&q=80" },
+    { name: "Glas bier", image: "https://images.unsplash.com/photo-1535958636474-b021ee887b13?auto=format&fit=crop&w=300&q=80" },
+    { name: "Fles bier", image: "https://images.unsplash.com/photo-1608270105747-23f269a7b1b3?auto=format&fit=crop&w=300&q=80" }
   ];
 
   let drinksList = [];
@@ -319,39 +318,39 @@
     const todayStr = new Date().toLocaleDateString('nl-NL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     document.getElementById('currentDateLabel').innerText = todayStr;
 
-    renderIconPicker();
+    renderPhotoPicker();
     loadSettingsAndData();
   };
 
-  function renderIconPicker() {
+  function renderPhotoPicker() {
     const grid = document.getElementById('iconPickerGrid');
     grid.innerHTML = '';
 
-    logoLibrary.forEach(item => {
+    photoLibrary.forEach(item => {
       const opt = document.createElement('div');
       opt.className = 'icon-option';
-      opt.title = item.name;
-      opt.onclick = () => selectLogo(item.url, opt);
-      opt.innerHTML = `<img src="${item.url}" alt="${item.name}">`;
+      opt.onclick = () => selectPhoto(item.url, opt);
+      opt.innerHTML = `
+        <img src="${item.url}" alt="${item.name}">
+        <span>${item.name}</span>
+      `;
       grid.appendChild(opt);
     });
   }
 
-  function selectLogo(url, element) {
+  function selectPhoto(url, element) {
     document.querySelectorAll('.icon-option').forEach(el => el.classList.remove('selected'));
     element.classList.add('selected');
     document.getElementById('newDrinkImage').value = url;
   }
 
   function loadSettingsAndData() {
-    // Zet direct standaardwaarden zodat de app onmiddellijk laadt
     drinksList = defaultDrinks;
     amountsList = [75, 150, 200, 250, 300, 500];
     renderPOSGrid();
     renderDrinksTable();
     renderAmountsTable();
 
-    // Haal daarna live instellingen op uit Firebase
     db.collection('vocht_settings').doc('config').get().then(doc => {
       if (doc.exists) {
         const data = doc.data();
@@ -380,7 +379,7 @@
       renderIntakeLog();
       updateProgressBar();
     }).catch(err => {
-      console.log("Geen inname records of geen verbinding:", err);
+      console.log("Geen inname records:", err);
     });
   }
 
@@ -394,7 +393,7 @@
       tile.className = 'pos-tile';
       tile.onclick = () => openAmountModal(drink);
       tile.innerHTML = `
-        <img src="${drink.image}" alt="${drink.name}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3105/3105805.png'">
+        <img src="${drink.image}" alt="${drink.name}" onerror="this.src='https://images.unsplash.com/photo-1548839140-29a749e1cf4d?auto=format&fit=crop&w=300&q=80'">
         <span>${drink.name}</span>
       `;
       grid.appendChild(tile);
@@ -500,7 +499,7 @@
       tr.innerHTML = `
         <td>${item.time || '-'}</td>
         <td style="display: flex; align-items: center; gap: 10px;">
-          <img src="${item.drinkImage}" class="drink-preview" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3105/3105805.png'">
+          <img src="${item.drinkImage}" class="drink-preview" onerror="this.src='https://images.unsplash.com/photo-1548839140-29a749e1cf4d?auto=format&fit=crop&w=300&q=80'">
           <b>${item.drinkName}</b>
         </td>
         <td><b>${item.amount} ml</b></td>
@@ -551,7 +550,7 @@
     drinksList.forEach((drink, index) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><img src="${drink.image}" class="drink-preview" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3105/3105805.png'"></td>
+        <td><img src="${drink.image}" class="drink-preview" onerror="this.src='https://images.unsplash.com/photo-1548839140-29a749e1cf4d?auto=format&fit=crop&w=300&q=80'"></td>
         <td><b>${drink.name}</b></td>
         <td>
           <button class="btn btn-danger btn-sm" style="padding: 5px 10px; font-size: 0.8rem;" onclick="deleteDrink(${index})">Verwijderen</button>
