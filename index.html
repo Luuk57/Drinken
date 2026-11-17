@@ -93,17 +93,18 @@
     .icon-option span { font-size: 0.75rem; display: block; margin-top: 3px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   </style>
 
-  <!-- PWA Manifest -->
+  <!-- PWA Manifest & Meta -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0056b3">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="icon-192.png">
 </head>
 <body>
 
 <div class="container">
   <h1>
-    <span>POS Vocht Intake & Beheer (1000ml Limiet)</span>
+    <span>POS Vocht Intake & Beheer (Limiet 1000ml)</span>
     <span id="currentDateLabel" style="font-size: 0.9rem; font-weight: normal; color: #555;">Vandaag</span>
   </h1>
 
@@ -646,6 +647,17 @@
 
   function exportPDF() {
     window.print();
+  }
+</script>
+
+<!-- Service Worker Registratie -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('ServiceWorker registered! Scope: ', reg.scope))
+        .catch(err => console.log('ServiceWorker registration failed: ', err));
+    });
   }
 </script>
 
